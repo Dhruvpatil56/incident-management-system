@@ -11,7 +11,11 @@ export function Dashboard() {
     queryFn: fetchIncidents,
     refetchInterval: 5000,
   });
-  const ordered = [...data].sort((a, b) => rank[a.severity] - rank[b.severity]);
+
+  const ordered = [...data].sort(
+    (a, b) => rank[a.severity] - rank[b.severity]
+  );
+
   return (
     <main>
       <h1>Incident Dashboard</h1>

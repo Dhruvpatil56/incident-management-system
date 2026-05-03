@@ -1,3 +1,3 @@
 # Pytest Cache
 .pytest_cache/
-pytest-cache-files-*/
+pytest-cache-files-*/node_modules/
