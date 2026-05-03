@@ -1,0 +1,160 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: incident-postgres
+    environment:
+      POSTGRES_USER: incident
+      POSTGRES_PASSWORD: incident
+      POSTGRES_DB: incidents
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./backend/src/incident_pipeline/db/migrate.sql:/docker-entrypoint-initdb.d/001_migrate.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U incident -d incidents"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mongo:
+    image: mongo:7
+    container_name: incident-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: incident-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: incident-nats
+    command: ["-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: incident-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+      nats:
+        condition: service_started
+    environment:
+      INCIDENT_DATABASE_URL: postgresql://incident:incident@postgres:5432/incidents
+      INCIDENT_MONGO_URL: mongodb://mongo:27017
+      INCIDENT_REDIS_URL: redis://redis:6379/0
+      INCIDENT_NATS_URL: nats://nats:4222
+      INCIDENT_NATS_SUBJECT: signals.raw
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: incident-frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: incident-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+      - postgres-exporter
+      - mongodb-exporter
+      - redis-exporter
+      - node-exporter
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    container_name: incident-grafana
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana:/var/lib/grafana/dashboards:ro
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: incident-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: postgresql://incident:incident@postgres:5432/incidents?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "9187:9187"
+
+  mongodb-exporter:
+    image: percona/mongodb_exporter:0.40
+    container_name: incident-mongodb-exporter
+    command:
+      - "--mongodb.uri=mongodb://mongo:27017"
+    depends_on:
+      - mongo
+    ports:
+      - "9216:9216"
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    container_name: incident-redis-exporter
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "9121:9121"
+
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:v1.8.2
+    container_name: incident-node-exporter
+    command:
+      - "--path.rootfs=/host"
+    pid: host
+    volumes:
+      - "/:/host:ro,rslave"
+    ports:
+      - "9100:9100"
+
+volumes:
+  postgres-data:
+  mongo-data:
+  redis-data:

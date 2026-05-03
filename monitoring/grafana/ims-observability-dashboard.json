@@ -1,0 +1,268 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    }
+  ],
+  "title": "IMS Observability Overview",
+  "uid": "ims-observability-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "job",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": "label_values(up, job)",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "API Request Rate (rps)",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job=~\"$job\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "API Error Rate (5xx/s)",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job=~\"$job\",status=~\"5..\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Signals Ingested (per sec)",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum(rate(signals_ingested_total{job=~\"$job\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Signals Rejected (429/503 per sec)",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum(rate(signals_rejected_total{job=~\"$job\"}[5m]))"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP Request Duration P95 (seconds)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le))"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP Throughput by Status",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job=~\"$job\"}[5m])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "NATS Publish Success vs Failure",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum(rate(nats_publish_total{job=~\"$job\"}[5m]))",
+          "legendFormat": "publish_ok"
+        },
+        {
+          "expr": "sum(rate(nats_publish_failures_total{job=~\"$job\"}[5m]))",
+          "legendFormat": "publish_fail"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Consumer Processing P95 (seconds)",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(consumer_processing_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le))"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "In-flight Signals / Queue Pressure",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "max(queue_inflight_signals{job=~\"$job\"})",
+          "legendFormat": "inflight"
+        },
+        {
+          "expr": "max(queue_lag_estimate{job=~\"$job\"})",
+          "legendFormat": "lag_estimate"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Debounce Drops / Incident Creates",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum(rate(debounce_dropped_total{job=~\"$job\"}[5m]))",
+          "legendFormat": "debounce_dropped"
+        },
+        {
+          "expr": "sum(rate(incident_created_total{job=~\"$job\"}[5m]))",
+          "legendFormat": "incident_created"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Incident State Transitions",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum(rate(incident_state_transitions_total{job=~\"$job\"}[5m])) by (from_state,to_state,result)",
+          "legendFormat": "{{from_state}}→{{to_state}} ({{result}})"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "RCA Submissions vs Validation Failures",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum(rate(rca_submissions_total{job=~\"$job\"}[5m]))",
+          "legendFormat": "rca_submissions"
+        },
+        {
+          "expr": "sum(rate(rca_validation_failures_total{job=~\"$job\"}[5m]))",
+          "legendFormat": "rca_validation_failures"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "MTTR P50 / P95 (seconds)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(mttr_seconds_bucket{job=~\"$job\"}[15m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(mttr_seconds_bucket{job=~\"$job\"}[15m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "DB Query Latency P95 (seconds)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le,db))",
+          "legendFormat": "{{db}} p95"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "DB Errors and Retries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "sum(rate(db_errors_total{job=~\"$job\"}[5m])) by (db)",
+          "legendFormat": "{{db}} errors"
+        },
+        {
+          "expr": "sum(rate(db_retry_attempts_total{job=~\"$job\"}[5m])) by (db)",
+          "legendFormat": "{{db}} retries"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Service Up (App + Exporters)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "targets": [
+        {
+          "expr": "up{job=~\"$job\"}",
+          "legendFormat": "{{job}}"
+        }
+      ]
+    }
+  ]
+}
