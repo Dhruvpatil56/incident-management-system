@@ -38,20 +38,7 @@
     "to": "now"
   },
   "templating": {
-    "list": [
-      {
-        "name": "job",
-        "type": "query",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
-        },
-        "query": "label_values(up, job)",
-        "refresh": 1,
-        "includeAll": true,
-        "multi": true
-      }
-    ]
+    "list": []
   },
   "panels": [
     {
@@ -61,7 +48,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{job=~\"$job\"}[5m]))"
+          "expr": "sum(rate(http_requests_total[5m]))"
         }
       ]
     },
@@ -72,7 +59,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{job=~\"$job\",status=~\"5..\"}[5m]))"
+          "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m]))"
         }
       ]
     },
@@ -83,7 +70,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "sum(rate(signals_ingested_total{job=~\"$job\"}[5m]))"
+          "expr": "sum(rate(signals_ingested_total[5m]))"
         }
       ]
     },
@@ -94,7 +81,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "sum(rate(signals_rejected_total{job=~\"$job\"}[5m]))"
+          "expr": "sum(rate(signals_rejected_total[5m]))"
         }
       ]
     },
@@ -105,7 +92,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le))"
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))"
         }
       ]
     },
@@ -116,7 +103,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total{job=~\"$job\"}[5m])) by (status)",
+          "expr": "sum(rate(http_requests_total[5m])) by (status)",
           "legendFormat": "{{status}}"
         }
       ]
@@ -128,11 +115,11 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "sum(rate(nats_publish_total{job=~\"$job\"}[5m]))",
+          "expr": "sum(rate(nats_publish_total[5m]))",
           "legendFormat": "publish_ok"
         },
         {
-          "expr": "sum(rate(nats_publish_failures_total{job=~\"$job\"}[5m]))",
+          "expr": "sum(rate(nats_publish_failures_total[5m]))",
           "legendFormat": "publish_fail"
         }
       ]
@@ -144,7 +131,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(consumer_processing_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le))"
+          "expr": "histogram_quantile(0.95, sum(rate(consumer_processing_duration_seconds_bucket[5m])) by (le))"
         }
       ]
     },
@@ -155,11 +142,11 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "max(queue_inflight_signals{job=~\"$job\"})",
+          "expr": "max(queue_inflight_signals)",
           "legendFormat": "inflight"
         },
         {
-          "expr": "max(queue_lag_estimate{job=~\"$job\"})",
+          "expr": "max(queue_lag_estimate)",
           "legendFormat": "lag_estimate"
         }
       ]
@@ -171,11 +158,11 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "sum(rate(debounce_dropped_total{job=~\"$job\"}[5m]))",
+          "expr": "sum(rate(debounce_dropped_total[5m]))",
           "legendFormat": "debounce_dropped"
         },
         {
-          "expr": "sum(rate(incident_created_total{job=~\"$job\"}[5m]))",
+          "expr": "sum(rate(incident_created_total[5m]))",
           "legendFormat": "incident_created"
         }
       ]
@@ -187,7 +174,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "sum(rate(incident_state_transitions_total{job=~\"$job\"}[5m])) by (from_state,to_state,result)",
+          "expr": "sum(rate(incident_state_transitions_total[5m])) by (from_state,to_state,result)",
           "legendFormat": "{{from_state}}→{{to_state}} ({{result}})"
         }
       ]
@@ -199,11 +186,11 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "sum(rate(rca_submissions_total{job=~\"$job\"}[5m]))",
+          "expr": "sum(rate(rca_submissions_total[5m]))",
           "legendFormat": "rca_submissions"
         },
         {
-          "expr": "sum(rate(rca_validation_failures_total{job=~\"$job\"}[5m]))",
+          "expr": "sum(rate(rca_validation_failures_total[5m]))",
           "legendFormat": "rca_validation_failures"
         }
       ]
@@ -215,11 +202,11 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(mttr_seconds_bucket{job=~\"$job\"}[15m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(mttr_seconds_bucket[15m])) by (le))",
           "legendFormat": "p50"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(mttr_seconds_bucket{job=~\"$job\"}[15m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(mttr_seconds_bucket[15m])) by (le))",
           "legendFormat": "p95"
         }
       ]
@@ -231,7 +218,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket{job=~\"$job\"}[5m])) by (le,db))",
+          "expr": "histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket[5m])) by (le,db))",
           "legendFormat": "{{db}} p95"
         }
       ]
@@ -243,11 +230,11 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "sum(rate(db_errors_total{job=~\"$job\"}[5m])) by (db)",
+          "expr": "sum(rate(db_errors_total[5m])) by (db)",
           "legendFormat": "{{db}} errors"
         },
         {
-          "expr": "sum(rate(db_retry_attempts_total{job=~\"$job\"}[5m])) by (db)",
+          "expr": "sum(rate(db_retry_attempts_total[5m])) by (db)",
           "legendFormat": "{{db}} retries"
         }
       ]
@@ -259,7 +246,7 @@
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "targets": [
         {
-          "expr": "up{job=~\"$job\"}",
+          "expr": "up",
           "legendFormat": "{{job}}"
         }
       ]
