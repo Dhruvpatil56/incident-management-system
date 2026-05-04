@@ -7,7 +7,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from alerting.router import COMPONENT_SEVERITY_MAP
-from app.dependencies import get_alert_router, get_incident_store, get_pipeline, get_signal_store
+from app.dependencies import (
+    get_alert_router,
+    get_incident_store,
+    get_mongo_signal_store,
+    get_pipeline,
+    get_signal_store,
+)
 from incident_pipeline.db.store import IncidentStore
 from incident_pipeline.models import Incident, IncidentState, RcaCategory
 from incident_pipeline.pipeline import IncidentPipeline
@@ -17,7 +23,7 @@ from observability.prometheus import (
     rca_submissions_total,
     rca_validation_failures_total,
 )
-from signals.store import InMemorySignalStore
+from signals.store import SignalStore
 from workflow.state_machine import InvalidTransitionError, transition_or_raise
 
 router = APIRouter(prefix="/api/v1/incidents", tags=["incidents"])
@@ -38,7 +44,10 @@ class RcaPayload(BaseModel):
 
 
 @router.post("")
-async def create_incident(incident: Incident, pipeline: IncidentPipeline = Depends(get_pipeline)) -> dict:
+async def create_incident(
+    incident: Incident,
+    pipeline: IncidentPipeline = Depends(get_pipeline)
+) -> dict:
     incident.severity = COMPONENT_SEVERITY_MAP.get(incident.component, incident.severity)
     result = pipeline.process(incident)
     if result.status != 201 or result.incident is None:
@@ -47,7 +56,9 @@ async def create_incident(incident: Incident, pipeline: IncidentPipeline = Depen
 
 
 @router.get("")
-async def list_incidents(pipeline: IncidentPipeline = Depends(get_pipeline)) -> list[dict]:
+async def list_incidents(
+    pipeline: IncidentPipeline = Depends(get_pipeline)
+) -> list[dict]:
     store = pipeline.store.__self__
     if isinstance(store, IncidentStore):
         return [i.model_dump(mode="json") for i in store.list_all()]
@@ -60,7 +71,7 @@ async def get_incident(
     incident_id: UUID,
     include_signals: bool = False,
     incident_store: IncidentStore = Depends(get_incident_store),
-    signal_store: InMemorySignalStore = Depends(get_signal_store),
+    signal_store: SignalStore = Depends(get_mongo_signal_store),
 ) -> dict:
     incident = incident_store.get_by_id(incident_id)
     if incident is None:

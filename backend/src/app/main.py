@@ -20,6 +20,7 @@ from app.routes.incidents import router as incidents_router
 from app.routes.signals import router as signals_router
 from observability.prometheus import observe_http, router as metrics_router
 from signals.consumer import SignalConsumer
+from signals.store import SignalStore
 
 class _NoopNats:
     is_connected = False
@@ -35,6 +36,8 @@ class _NoopMongo:
         async def command(self, _cmd: str):
             return {"ok": 1}
     admin = _Admin()
+    def __getitem__(self, key):
+        return self
     def close(self):
         return None
 
@@ -68,11 +71,16 @@ async def lifespan(app: FastAPI):
     app.state.db = psycopg2.connect(app_settings.database_url)
     bootstrap_defaults(app)
 
-    # Start the NATS consumer using already-bootstrapped state
+    # Wire MongoDB signal store
+    app.state.mongo_signal_store = SignalStore(
+        app.state.mongo["incidents"]["signals"]
+    )
+
+    # Start the NATS consumer using MongoDB signal store
     consumer = SignalConsumer(
         nats_client=app.state.nats,
         subject=app_settings.nats_subject,
-        store=app.state.signal_store,
+        store=app.state.mongo_signal_store,
         pipeline=app.state.pipeline,
         redis_client=app.state.redis,
     )

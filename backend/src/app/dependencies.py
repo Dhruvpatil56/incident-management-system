@@ -18,7 +18,7 @@ from incident_pipeline.models import Severity
 from incident_pipeline.pipeline import IncidentPipeline
 from incident_pipeline.rca.policy import RcaPolicy
 from observability.metrics import ThroughputCounter
-from signals.store import InMemorySignalStore
+from signals.store import InMemorySignalStore, SignalStore
 
 
 def _ensure_bootstrapped(app) -> None:
@@ -35,6 +35,10 @@ def get_pipeline(request: Request) -> IncidentPipeline:
 def get_signal_store(request: Request) -> InMemorySignalStore:
     _ensure_bootstrapped(request.app)
     return request.app.state.signal_store
+
+def get_mongo_signal_store(request: Request) -> SignalStore:
+    _ensure_bootstrapped(request.app)
+    return request.app.state.mongo_signal_store
 
 
 def get_rate_limiter(request: Request) -> TokenBucket:
