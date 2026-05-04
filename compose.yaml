@@ -46,6 +46,15 @@ services:
       - "4222:4222"
       - "8222:8222"
 
+  nats-exporter:
+    image: natsio/prometheus-nats-exporter:latest
+    container_name: incident-nats-exporter
+    command: ["-varz", "-routez", "-connz", "-subz", "http://nats:8222"]
+    ports:
+      - "7777:7777"
+    depends_on:
+      - nats
+
   backend:
     build:
       context: ./backend
@@ -95,9 +104,10 @@ services:
       - mongodb-exporter
       - redis-exporter
       - node-exporter
+      - nats-exporter
 
   grafana:
-    image: grafana/grafana:11.2.2
+    image: grafana/grafana:10.4.2
     container_name: incident-grafana
     depends_on:
       - prometheus
